@@ -1,0 +1,63 @@
+# dependencies
+node_modules/
+
+# build outputs
+dist/
+build/
+out/
+.next/
+.nuxt/
+.output/
+.unplugin/
+.vercel/
+.netlify/
+.svelte-kit/
+public/
+html/
+
+# lockfiles (Prettier 默认忽略，但写上更直观）
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# logs
+*.log
+logs/
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+*.tmp
+*.temp
+*.swp
+*.swo
+*.bak
+.idea/
+.vscode/
+*.sublime-*
+
+# env / local
+.env*
+.local
+*.local
+
+# assets not meant to be formatted
+**/*.svg
+**/*.png
+**/*.jpg
+**/*.jpeg
+**/*.gif
+**/*.ico
+**/*.woff
+**/*.woff2
+**/*.ttf
+**/*.eot
+
+# shell scripts
+**/*.sh
+
+# coverage / test artifacts
+coverage/
+.nyc_output/
+*.lcov
+*.coverage

@@ -1,0 +1,143 @@
+{
+    "name": "@a2bei4/utils",
+    "version": "1.0.0",
+    "description": "🧰 零依赖、ESM 的 JS 业务工具箱：数组乱序/深浅克隆、防抖节流、URL/query 解析、Date/时长格式化、随机汉字/字母、文件下载、事件总线、UUID/分布式短 ID、树结构互转等 40+ 常用函数 & 类，Tree-Shaking 友好。",
+    "type": "module",
+    "main": "dist/a2bei4.utils.cjs.js",
+    "module": "dist/a2bei4.utils.esm.js",
+    "unpkg": "dist/a2bei4.utils.umd.min.js",
+    "jsdelivr": "dist/a2bei4.utils.umd.min.js",
+    "types": "types/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./types/index.d.ts",
+            "import": "./dist/a2bei4.utils.esm.js",
+            "require": "./dist/a2bei4.utils.cjs.js"
+        },
+        "./arr": {
+            "types": "./types/arr.d.ts",
+            "import": "./dist/arr.js",
+            "require": "./dist/arr.cjs"
+        },
+        "./browser": {
+            "types": "./types/browser.d.ts",
+            "import": "./dist/browser.js",
+            "require": "./dist/browser.cjs"
+        },
+        "./common": {
+            "types": "./types/common.d.ts",
+            "import": "./dist/common.js",
+            "require": "./dist/common.cjs"
+        },
+        "./date": {
+            "types": "./types/date.d.ts",
+            "import": "./dist/date.js",
+            "require": "./dist/date.cjs"
+        },
+        "./download": {
+            "types": "./types/download.d.ts",
+            "import": "./dist/download.js",
+            "require": "./dist/download.cjs"
+        },
+        "./evt": {
+            "types": "./types/evt.d.ts",
+            "import": "./dist/evt.js",
+            "require": "./dist/evt.cjs"
+        },
+        "./id": {
+            "types": "./types/id.d.ts",
+            "import": "./dist/id.js",
+            "require": "./dist/id.cjs"
+        },
+        "./timer": {
+            "types": "./types/timer.d.ts",
+            "import": "./dist/timer.js",
+            "require": "./dist/timer.cjs"
+        },
+        "./tree": {
+            "types": "./types/tree.d.ts",
+            "import": "./dist/tree.js",
+            "require": "./dist/tree.cjs"
+        }
+    },
+    "files": [
+        "dist",
+        "types"
+    ],
+    "sideEffects": false,
+    "scripts": {
+        "update:package": "node scripts/update-package.js",
+        "generate:entry": "node scripts/generate-entry.js",
+        "generate:index": "node scripts/generate-index.js",
+        "prebuild": "pnpm run update:package && pnpm run generate:entry && pnpm run generate:index",
+        "build": "rollup -c",
+        "dev": "rollup -c -w",
+        "prepublishOnly": "pnpm run build",
+        "format": "prettier --write \"src/**/*.{js,ts,json,md}\""
+    },
+    "keywords": [
+        "a2bei4",
+        "xiaodu114",
+        "utils",
+        "utilities",
+        "toolkit",
+        "zero-dependency",
+        "esm",
+        "shuffle",
+        "move-array-item",
+        "deep-clone",
+        "assign-existing",
+        "tree-flat",
+        "tree-nested",
+        "tree-utils",
+        "debounce",
+        "throttle",
+        "random",
+        "random-han",
+        "random-en",
+        "uuid",
+        "guid",
+        "id",
+        "short-id",
+        "nanoid",
+        "date-format",
+        "duration-format",
+        "time-diff",
+        "random-date",
+        "viewport",
+        "download",
+        "download-excel",
+        "download-json",
+        "event-bus",
+        "cross-page",
+        "is-plain-object",
+        "is-promise",
+        "is-blob",
+        "is-date",
+        "is-function",
+        "get-type",
+        "blob-to-text",
+        "read-file",
+        "file-download",
+        "business-utils",
+        "frontend-utils",
+        "daily-helper"
+    ],
+    "license": "MIT",
+    "author": "xiaodu114",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/xiaodu114/a2bei4-utils.git"
+    },
+    "homepage": "https://github.com/xiaodu114/a2bei4-utils",
+    "devDependencies": {
+        "@rollup/plugin-commonjs": "^28.0.6",
+        "@rollup/plugin-node-resolve": "^16.0.2",
+        "@rollup/plugin-terser": "^0.4.4",
+        "prettier": "^3.6.2",
+        "rollup": "^4.52.4",
+        "rollup-plugin-dts": "^6.2.3",
+        "rollup-plugin-filesize": "^10.0.0",
+        "typescript": "^5.9.3"
+    }
+}

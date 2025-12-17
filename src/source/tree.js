@@ -90,3 +90,77 @@ export const findObjAttrValueById = function findObjAttrValueByIdFn(id, arr, res
         }
     }
 };
+
+/**
+ * 从服务端返回的已选 id 数组里，提取出
+ * 1. 叶子节点
+ * 2. 所有子节点都被选中的父节点
+ * 其余父节点一律丢弃（由前端 Tree 自动算半选）
+ *
+ * @param {Array}  treeData     完整树
+ * @param {Array}  selectedKeys 后端给的选中 id 数组
+ * @param {String} idKey        节点唯一字段
+ * @param {String} childrenKey  子节点字段
+ * @returns {{checked: string[], halfChecked: string[]}}
+ */
+export function extractFullyCheckedKeys(treeData, selectedKeys, idKey = "id", childrenKey = "children") {
+    const selectedSet = new Set(selectedKeys);
+    const checked = new Set();
+    const halfChecked = new Set();
+
+    /* 返回值含义
+        0 - 未选中
+        1 - 半选
+        2 - 全选
+        */
+    function dfs(node) {
+        const nodeId = node[idKey];
+        const children = node[childrenKey] || [];
+
+        // 叶子
+        if (!children.length) {
+            if (selectedSet.has(nodeId)) {
+                checked.add(nodeId);
+                return 2;
+            }
+            return 0;
+        }
+
+        // 非叶子
+        let allChecked = true;
+        let someChecked = false;
+
+        children.forEach((child) => {
+            const childState = dfs(child);
+            if (childState !== 2) allChecked = false;
+            if (childState >= 1) someChecked = true;
+        });
+
+        // 当前节点本身在 selectedKeys 里，但子节点未全选 → 只能算半选
+        if (selectedSet.has(nodeId)) {
+            if (allChecked) {
+                checked.add(nodeId);
+                return 2;
+            }
+            halfChecked.add(nodeId);
+            return 1;
+        }
+
+        // 当前节点不在 selectedKeys 里，看子节点
+        if (allChecked) {
+            checked.add(nodeId);
+            return 2;
+        }
+        if (someChecked) {
+            halfChecked.add(nodeId);
+            return 1;
+        }
+        return 0;
+    }
+
+    treeData.forEach(dfs);
+    return {
+        checked: [...checked],
+        halfChecked: [...halfChecked]
+    };
+}

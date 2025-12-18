@@ -1,5 +1,5 @@
 /**
- * @class WebSocketManager - 一个功能强大、高度可定制的 WebSocket 助手类
+ * @class WebSocketManager - 一个纯粹、强大的 WebSocket 连接管理引擎
  *
  * @features
  * - 智能断线重连 (指数退避算法)
@@ -7,10 +7,10 @@
  * - 高度可定制的心跳保活机制 (通过注入函数实现)
  * - 页面可见性 API 集成
  * - 消息发送队列
- * - 事件驱动的消息分发
  * - 清晰的生命周期管理
  * - 优雅的资源销毁
  * - 可配置的数据序列化/反序列化
+ * - 纯粹的消息传递，不关心消息内容
  */
 export class WebSocketManager {
     /**
@@ -214,7 +214,7 @@ export class WebSocketManager {
     }
 
     /**
-     * 优化后的消息处理方法，使用注入的函数来判断心跳
+     * 纯粹的消息处理方法：处理心跳，然后将数据交给使用者
      * @param {MessageEvent} event
      */
     _onMessage(event) {
@@ -228,12 +228,12 @@ export class WebSocketManager {
         if (this.options.deserializeData) {
             try {
                 const parsedMessage = JSON.parse(event.data);
-                this._emit("message", parsedMessage);
+                this._emit("message", parsedMessage, event);
             } catch (e) {
-                this._emit("message", event.data);
+                this._emit("message", event.data, event);
             }
         } else {
-            this._emit("message", event.data);
+            this._emit("message", event.data, event);
         }
     }
 
@@ -253,7 +253,7 @@ export class WebSocketManager {
         this._emit("error", event);
     }
 
-    // --- 心跳机制 (重构) ---
+    // --- 心跳机制 ---
     _startHeartbeat() {
         // 如果没有配置 getPingMessage，则无法启动心跳
         if (!this.options.getPingMessage) {
@@ -369,7 +369,7 @@ export class WebSocketManager {
 
     _handleVisibilityChange() {
         // 如果未启用心跳，不需要处理页面可见性变化
-        if (!this.options.enableHeartbeat) {
+        if (!this.options.getPingMessage) {
             return;
         }
 

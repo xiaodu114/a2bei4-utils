@@ -1,6 +1,6 @@
 {
     "name": "a2bei4-utils",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "description": "🧰 零依赖、ESM 的 JS 业务工具箱：数组乱序/深浅克隆、防抖节流、URL/query 解析、Date/时长格式化、随机汉字/字母、文件下载、事件总线、UUID/分布式短 ID、树结构互转等 40+ 常用函数 & 类，Tree-Shaking 友好。",
     "private": false,
     "type": "module",
@@ -77,6 +77,7 @@
     ],
     "sideEffects": false,
     "scripts": {
+        "clean:pack": "node scripts/clean-pack-generate.js",
         "update:package": "node scripts/update-package.js",
         "generate:entry": "node scripts/generate-entry.js",
         "generate:index": "node scripts/generate-index.js",

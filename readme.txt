@@ -1,3 +1,5 @@
+！！！写在最前面： dist 、 types 、 /src/temp 、 /src/index.js 是构建过程中生成的，可以利用 clean-pack-generate.js 删除
+
 -->  官方 npm 仓库地址： https://registry.npmjs.org/
 -->  阿里云 npm 仓库地址： https://registry.npmmirror.com/
 -->  --registry 显示指定的仓库地址，如：http://192.168.x.x:4873

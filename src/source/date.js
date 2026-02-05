@@ -1,3 +1,13 @@
+function getLocales_TimePeriod() {
+    return {
+        earlyMorning: "凌晨",
+        morning: "上午",
+        noon: "中午",
+        afternoon: "下午",
+        evening: "晚上"
+    };
+}
+
 /**
  * 将任意值安全转换为 Date 对象。
  * - 数字／数字字符串：视为时间戳
@@ -182,4 +192,134 @@ export function formatDurationMaxDay(totalSeconds, options = {}) {
  */
 export function formatDurationMaxHour(totalSeconds, options = {}) {
     return formatDuration(totalSeconds, { ...options, maxUnit: "hour" });
+}
+
+/**
+ * 根据小时数返回对应的时间段名称。
+ *
+ * @param {number} hour - 24 小时制的小时（0-23）
+ * @param {object} [locales] - 自定义时段文案
+ * @param {string} [locales.earlyMorning="凌晨"] - 00-05
+ * @param {string} [locales.morning="上午"] - 06-11
+ * @param {string} [locales.noon="中午"] - 12-13
+ * @param {string} [locales.afternoon="下午"] - 14-17
+ * @param {string} [locales.evening="晚上"] - 18-23
+ * @returns {string} 时段名称
+ * @throws {RangeError} 当 hour 不在 0-23 范围时抛出
+ */
+export function getTimePeriodName(hour, locales = getLocales_TimePeriod()) {
+    if (!Number.isInteger(hour) || hour < 0 || hour > 23) {
+        throw new RangeError("hour 必须是 0-23 的整数");
+    }
+    if (hour >= 0 && hour < 6) return locales.earlyMorning;
+    if (hour < 12) return locales.morning;
+    if (hour < 14) return locales.noon;
+    if (hour < 18) return locales.afternoon;
+    return locales.evening;
+}
+
+/**
+ * 格式化时间戳为本地化的时间字符串。
+ *
+ * @param {number} timestamp - 要格式化的时间戳（毫秒）。
+ * @param {Object} [locales] - 本地化配置对象，包含时间相关的本地化字符串。
+ * @param {string} [locales.justNow='刚刚'] - 表示刚刚过去的时间。
+ * @param {string} [locales.today='今天'] - 表示今天。
+ * @param {string} [locales.yesterday='昨天'] - 表示昨天。
+ * @param {string} [locales.beforeYesterday='前天'] - 表示前天。
+ * @param {string} [locales.year='年'] - 年的单位。
+ * @param {string} [locales.month='月'] - 月的单位。
+ * @param {string} [locales.day='日'] - 日的单位。
+ * @param {Object} [locales.timePeriod] - 一天中不同时间段的本地化字符串。
+ * @param {string} [locales.timePeriod.earlyMorning='凌晨'] - 凌晨。
+ * @param {string} [locales.timePeriod.morning='上午'] - 上午。
+ * @param {string} [locales.timePeriod.noon='中午'] - 中午。
+ * @param {string} [locales.timePeriod.afternoon='下午'] - 下午。
+ * @param {string} [locales.timePeriod.evening='晚上'] - 晚上。
+ * @param {Array<string>} [locales.weekDays=['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']] - 星期几的本地化字符串数组。
+ *
+ * @returns {string} - 格式化后的时间字符串。
+ */
+export function formatTimeForLocale(
+    timestamp,
+    locales = {
+        justNow: "刚刚",
+        today: "今天",
+        yesterday: "昨天",
+        beforeYesterday: "前天",
+        year: "年",
+        month: "月",
+        day: "日",
+        timePeriod: getLocales_TimePeriod(),
+        weekDays: ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"]
+    }
+) {
+    const now = new Date();
+    const messageDate = new Date(timestamp);
+
+    const nowTime = now.getTime();
+    const msgTime = messageDate.getTime();
+    const diff = nowTime - msgTime;
+    const diffMinutes = Math.floor(diff / (1000 * 60));
+
+    const year = messageDate.getFullYear();
+    const month = messageDate.getMonth() + 1;
+    const day = messageDate.getDate();
+    const hour = messageDate.getHours();
+    const minute = messageDate.getMinutes().toString().padStart(2, "0");
+
+    // 刚刚：1分钟内
+    if (diffMinutes < 1) {
+        return locales.justNow;
+    }
+
+    // 计算自然天数差（按日期而非时间差）
+    const nowDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const msgDate = new Date(year, month - 1, day);
+    const diffDays = Math.floor((nowDate.getTime() - msgDate.getTime()) / (1000 * 60 * 60 * 24));
+
+    const period = getTimePeriodName(hour, locales.timePeriod);
+    const timeStr = `${hour}:${minute}`;
+
+    // 今天
+    if (diffDays === 0) {
+        return `${locales.today} ${period}${timeStr}`;
+    }
+
+    // 昨天
+    if (diffDays === 1) {
+        return `${locales.yesterday} ${period}${timeStr}`;
+    }
+
+    // 前天
+    if (diffDays === 2) {
+        return `${locales.beforeYesterday} ${period}${timeStr}`;
+    }
+
+    // 本周内（周一到周日，且不是今天/昨天/前天）
+    // 获取本周一的日期
+    const nowDay = now.getDay() || 7; // 周日转为7
+    const msgDay = messageDate.getDay() || 7;
+    const mondayOfThisWeek = new Date(nowDate.getTime() - (nowDay - 1) * 24 * 60 * 60 * 1000);
+    const mondayOfThatWeek = new Date(msgDate.getTime() - (msgDay - 1) * 24 * 60 * 60 * 1000);
+
+    if (mondayOfThisWeek.getTime() === mondayOfThatWeek.getTime() && diffDays < 7) {
+        const weekDayName = locales.weekDays[messageDate.getDay()];
+        return `${weekDayName}${period} ${timeStr}`;
+    }
+
+    // 本月内（非本周）
+    const nowYear = now.getFullYear();
+    const nowMonth = now.getMonth();
+    if (year === nowYear && messageDate.getMonth() === nowMonth) {
+        return `${month}${locales.month}${day}${locales.day} ${period}${timeStr}`;
+    }
+
+    // 本年内（非本月）
+    if (year === nowYear) {
+        return `${month}${locales.month}${day}${locales.day} ${period}${timeStr}`;
+    }
+
+    // 其他（非本年）
+    return `${year}${locales.year}${month}${locales.month}${day}${locales.day} ${period}${timeStr}`;
 }

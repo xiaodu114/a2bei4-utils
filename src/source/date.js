@@ -67,132 +67,221 @@ export function randomDateInRange(date1, date2) {
     return new Date(v1 + Math.floor(Math.random() * (v2 - v1 + 1)));
 }
 
-/**
- * 计算两个时间之间的剩余/已过时长（天-时-分-秒），返回带补零的展示对象。
- *
- * @param {string|number|Date} originalTime - 原始时间（可转 Date 的任意值）
- * @param {Date} [currentTime=new Date()] - 基准时间，默认当前
- * @returns {{days:number,hours:string,minutes:string,seconds:string}}
- */
-export function calcTimeDifference(originalTime, currentTime = new Date()) {
-    // 计算时间差（毫秒）
-    const diffMs = currentTime - new Date(originalTime);
+//#region   持续时间相关
 
-    // 转换为天、小时、分钟、秒
-    const diffSeconds = Math.floor(diffMs / 1000);
-    const days = Math.floor(diffSeconds / (3600 * 24));
-    const hours = Math.floor((diffSeconds % (3600 * 24)) / 3600);
-    const minutes = Math.floor((diffSeconds % 3600) / 60);
+/**
+ * 时间持续对象（完整版本，包含年月日时分秒毫秒）
+ * @typedef {Object} DurationObject
+ * @property {number} years - 年数
+ * @property {number} months - 月数（0-11）
+ * @property {number} days - 天数（0-29，取决于 monthDays）
+ * @property {number} hours - 小时数（0-23）
+ * @property {number} minutes - 分钟数（0-59）
+ * @property {number} seconds - 秒数（0-59）
+ * @property {number} milliseconds - 毫秒数（0-999）
+ */
+
+/**
+ * 时间持续对象（最大单位为天）
+ * @typedef {Object} DurationMaxDayObject
+ * @property {number} days - 天数
+ * @property {number} hours - 小时数（0-23）
+ * @property {number} minutes - 分钟数（0-59）
+ * @property {number} seconds - 秒数（0-59）
+ * @property {number} milliseconds - 毫秒数（0-999）
+ */
+
+/**
+ * 时间持续对象（最大单位为小时）
+ * @typedef {Object} DurationMaxHourObject
+ * @property {number} hours - 小时数
+ * @property {number} minutes - 分钟数（0-59）
+ * @property {number} seconds - 秒数（0-59）
+ * @property {number} milliseconds - 毫秒数（0-999）
+ */
+
+/**
+ * 将毫秒转换为时间持续对象。
+ *
+ * @param {number} milliseconds - 毫秒数（非负整数）
+ * @param {Object} [options] - 选项对象。
+ * @param {number} [options.yearDays=365] - 一年的天数。
+ * @param {number} [options.monthDays=30] - 一月的天数。
+ * @returns {DurationObject} 时间持续对象
+ * @throws {TypeError} 当 milliseconds 不是有效数字
+ * @throws {RangeError} 当 milliseconds 为负数
+ * @throws {RangeError} 当 yearDays 或 monthDays 不是正整数
+ *
+ * @example
+ * // 基本用法
+ * millisecond2Duration(42070000500);
+ * // 返回: { years: 1, months: 4, days: 1, hours: 22, minutes: 6, seconds: 40, milliseconds: 500 }
+ */
+export function millisecond2Duration(milliseconds, options = { yearDays: 365, monthDays: 30 }) {
+    // 参数验证
+    if (typeof milliseconds !== "number" || isNaN(milliseconds)) {
+        throw new TypeError("milliseconds must be a valid number");
+    }
+    if (milliseconds < 0) {
+        throw new RangeError("milliseconds must be a non-negative number");
+    }
+
+    // 默认选项
+    const { yearDays = 365, monthDays = 30 } = options;
+
+    // 选项验证
+    if (!Number.isInteger(yearDays) || yearDays <= 0) {
+        throw new RangeError("yearDays must be a positive integer");
+    }
+    if (!Number.isInteger(monthDays) || monthDays <= 0) {
+        throw new RangeError("monthDays must be a positive integer");
+    }
+
+    const totalMilliseconds = Math.floor(milliseconds);
+    const ms = totalMilliseconds % 1000;
+    const diffSeconds = Math.floor(totalMilliseconds / 1000);
+
     const seconds = diffSeconds % 60;
+    const minutes = Math.floor(diffSeconds / 60) % 60;
+    const hours = Math.floor(diffSeconds / 3600) % 24;
 
-    const padZero = (num) => String(num).padStart(2, "0");
+    // 计算年、月、日
+    const totalDays = Math.floor(diffSeconds / 3600 / 24);
+    const years = Math.floor(totalDays / yearDays);
+    const remainingDays = totalDays % yearDays;
+    const months = Math.floor(remainingDays / monthDays);
+    const days = remainingDays % monthDays;
 
-    return {
-        days,
-        hours: padZero(hours),
-        minutes: padZero(minutes),
-        seconds: padZero(seconds)
-    };
+    return { years, months, days, hours, minutes, seconds, milliseconds: ms };
 }
 
 /**
- * 将总秒数格式化成人类可读的时间段文本。
- * 固定进制：1 年=365 天，1 月=30 天。
- *
- * @param {number} totalSeconds - 非负总秒数
- * @param {object} [options] - 格式化选项
- * @param {Partial<{year:string,month:string,day:string,hour:string,minute:string,second:string}>} [options.labels] - 各单位的自定义文本
- * @param {('year'|'month'|'day'|'hour'|'minute'|'second')} [options.maxUnit] - 最大输出单位
- * @param {('year'|'month'|'day'|'hour'|'minute'|'second')} [options.minUnit] - 最小输出单位
- * @param {boolean} [options.showZero] - 是否强制显示 0 秒
- * @returns {string} 拼接后的时长文本，如“1天 02小时 30分钟”
- * @throws {TypeError} 当 totalSeconds 为非数字或负数时抛出
+ * 将毫秒转换为时间持续对象（最大单位为天）。
+ * @param {number} milliseconds - 毫秒数（非负整数）
+ * @returns {DurationMaxDayObject} 包含天、小时、分钟、秒、毫秒的时间持续对象
+ * @throws {TypeError} 当 milliseconds 不是有效数字时抛出
+ * @throws {RangeError} 当 milliseconds 为负数时抛出
+ * @example
+ * // 返回 { days: 486, hours: 22, minutes: 6, seconds: 40, milliseconds: 500 }
+ * millisecond2DurationMaxDay(42070000500);
  */
-export function formatDuration(totalSeconds, options = {}) {
-    if (typeof totalSeconds !== "number" || totalSeconds < 0 || !isFinite(totalSeconds)) {
-        throw new TypeError("totalSeconds 必须是非负数字");
+export function millisecond2DurationMaxDay(milliseconds) {
+    if (typeof milliseconds !== "number" || isNaN(milliseconds)) {
+        throw new TypeError("milliseconds must be a valid number");
+    }
+    if (milliseconds < 0) {
+        throw new RangeError("milliseconds must be a non-negative number");
     }
 
-    // 1. 默认中文单位
-    const DEFAULT_LABELS = {
-        year: "年",
-        month: "月",
-        day: "天",
-        hour: "小时",
-        minute: "分钟",
-        second: "秒"
-    };
+    const totalMilliseconds = Math.floor(milliseconds);
+    const ms = totalMilliseconds % 1000;
+    const diffSeconds = Math.floor(totalMilliseconds / 1000);
 
-    // 2. 固定进制表（秒）
-    const UNIT_TABLE = [
-        { key: "year", seconds: 365 * 24 * 3600 },
-        { key: "month", seconds: 30 * 24 * 3600 },
-        { key: "day", seconds: 24 * 3600 },
-        { key: "hour", seconds: 3600 },
-        { key: "minute", seconds: 60 },
-        { key: "second", seconds: 1 }
-    ];
+    const seconds = diffSeconds % 60;
+    const minutes = Math.floor(diffSeconds / 60) % 60;
+    const hours = Math.floor(diffSeconds / 3600) % 24;
+    const days = Math.floor(diffSeconds / 3600 / 24);
 
-    // 3. 合并用户自定义文本
-    const labels = Object.assign({}, DEFAULT_LABELS, options.labels);
-
-    // 4. 根据 maxUnit / minUnit 截取
-    let start = 0,
-        end = UNIT_TABLE.length;
-    if (options.maxUnit) {
-        const idx = UNIT_TABLE.findIndex((u) => u.key === options.maxUnit);
-        if (idx !== -1) start = idx;
-    }
-    if (options.minUnit) {
-        const idx = UNIT_TABLE.findIndex((u) => u.key === options.minUnit);
-        if (idx !== -1) end = idx + 1;
-    }
-    const units = UNIT_TABLE.slice(start, end);
-    if (!units.length) units.push(UNIT_TABLE[UNIT_TABLE.length - 1]); // 保底秒
-
-    // 5. 逐级计算
-    let rest = Math.floor(totalSeconds);
-    const parts = [];
-
-    for (const { key, seconds } of units) {
-        const val = Math.floor(rest / seconds);
-        rest %= seconds;
-
-        const shouldShow = val > 0 || (options.showZero && key === "second");
-        if (shouldShow || (parts.length === 0 && rest === 0)) {
-            parts.push(`${val}${labels[key]}`);
-        }
-    }
-
-    // 6. 兜底
-    if (parts.length === 0) {
-        parts.push(`0${labels[units[units.length - 1].key]}`);
-    }
-
-    return parts.join("");
+    return { days, hours, minutes, seconds, milliseconds: ms };
 }
 
 /**
- * 快捷调用 {@link formatDuration}，最大单位到“天”。
- *
- * @param {number} totalSeconds
- * @param {Omit<Parameters<typeof formatDuration>[1],'maxUnit'>} [options]
- * @returns {string}
+ * 将毫秒转换为时间持续对象（最大单位为小时）。
+ * @param {number} milliseconds - 毫秒数（非负整数）
+ * @returns {DurationMaxHourObject} 包含小时、分钟、秒、毫秒的时间持续对象
+ * @throws {TypeError} 当 milliseconds 不是有效数字时抛出
+ * @throws {RangeError} 当 milliseconds 为负数时抛出
+ * @example
+ * // 返回 { hours: 11686, minutes: 6, seconds: 40, milliseconds: 500 }
+ * millisecond2DurationMaxHour(42070000500);
  */
-export function formatDurationMaxDay(totalSeconds, options = {}) {
-    return formatDuration(totalSeconds, { ...options, maxUnit: "day" });
+export function millisecond2DurationMaxHour(milliseconds) {
+    if (typeof milliseconds !== "number" || isNaN(milliseconds)) {
+        throw new TypeError("milliseconds must be a valid number");
+    }
+    if (milliseconds < 0) {
+        throw new RangeError("milliseconds must be a non-negative number");
+    }
+
+    const totalMilliseconds = Math.floor(milliseconds);
+    const ms = totalMilliseconds % 1000;
+    const diffSeconds = Math.floor(totalMilliseconds / 1000);
+
+    const seconds = diffSeconds % 60;
+    const minutes = Math.floor(diffSeconds / 60) % 60;
+    const hours = Math.floor(diffSeconds / 3600);
+
+    return { hours, minutes, seconds, milliseconds: ms };
 }
 
 /**
- * 快捷调用 {@link formatDuration}，最大单位到“小时”。
+ * 将秒转换为时间持续对象。
  *
- * @param {number} totalSeconds
- * @param {Omit<Parameters<typeof formatDuration>[1],'maxUnit'>} [options]
- * @returns {string}
+ * @param {number} seconds - 秒数（非负整数）
+ * @param {Object} [options] - 选项对象。
+ * @param {number} [options.yearDays=365] - 一年的天数。
+ * @param {number} [options.monthDays=30] - 一月的天数。
+ * @returns {DurationObject} 时间持续对象
+ * @throws {TypeError} 当 seconds 不是有效数字
+ * @throws {RangeError} 当 seconds 为负数
+ * @throws {RangeError} 当 yearDays 或 monthDays 不是正整数
+ *
+ * @example
+ * // 基本用法
+ * second2Duration(42070000.5);
+ * // 返回: { years: 1, months: 4, days: 1, hours: 22, minutes: 6, seconds: 40, milliseconds: 500 }
  */
-export function formatDurationMaxHour(totalSeconds, options = {}) {
-    return formatDuration(totalSeconds, { ...options, maxUnit: "hour" });
+export function second2Duration(seconds, options = { yearDays: 365, monthDays: 30 }) {
+    if (typeof seconds !== "number" || isNaN(seconds)) {
+        throw new TypeError("seconds must be a valid number");
+    }
+    if (seconds < 0) {
+        throw new RangeError("seconds must be a non-negative number");
+    }
+    return millisecond2Duration(seconds * 1000, options);
 }
+
+/**
+ * 将秒转换为时间持续对象（最大单位为天）。
+ * @param {number} seconds - 秒数（非负整数）
+ * @returns {DurationMaxDayObject} 包含天、小时、分钟、秒、毫秒的时间持续对象
+ * @throws {TypeError} 当 seconds 不是有效数字时抛出
+ * @throws {RangeError} 当 seconds 为负数时抛出
+ * @example
+ * // 返回 { days: 486, hours: 22, minutes: 6, seconds: 40, milliseconds: 500 }
+ * second2DurationMaxDay(42070000.5);
+ */
+export function second2DurationMaxDay(seconds) {
+    if (typeof seconds !== "number" || isNaN(seconds)) {
+        throw new TypeError("seconds must be a valid number");
+    }
+    if (seconds < 0) {
+        throw new RangeError("seconds must be a non-negative number");
+    }
+    return millisecond2DurationMaxDay(seconds * 1000);
+}
+
+/**
+ * 将秒转换为时间持续对象（最大单位为小时）。
+ * @param {number} seconds - 秒数（非负整数）
+ * @returns {DurationMaxHourObject} 包含小时、分钟、秒、毫秒的时间持续对象
+ * @throws {TypeError} 当 seconds 不是有效数字时抛出
+ * @throws {RangeError} 当 seconds 为负数时抛出
+ * @example
+ * // 返回 { hours: 11686, minutes: 6, seconds: 40, milliseconds: 500 }
+ * second2DurationMaxHour(42070000.5);
+ */
+export function second2DurationMaxHour(seconds) {
+    if (typeof seconds !== "number" || isNaN(seconds)) {
+        throw new TypeError("seconds must be a valid number");
+    }
+    if (seconds < 0) {
+        throw new RangeError("seconds must be a non-negative number");
+    }
+    return millisecond2DurationMaxHour(seconds * 1000);
+}
+
+//#endregion
 
 /**
  * 根据小时数返回对应的时间段名称。

@@ -72,23 +72,23 @@ export function flatCompleteTree2NestedTree(nodes, parentId = 0, { idKey = "id",
  * @param {T[]} arr - 嵌套树森林
  * @param {string} [idKey='id'] - 主键字段
  * @param {string} [childrenKey='children'] - 子节点字段
- * @returns {any} 找到的节点；未找到返回 `undefined`
+ * @returns {T | undefined} 找到的节点；未找到返回 `undefined`
  */
-export const findTreeNodeById = function findTreeNodeByIdFn(id, arr, idKey = "id", childrenKey = "children") {
+export function findTreeNodeById(id, arr, idKey = "id", childrenKey = "children") {
     if (Array.isArray(arr) && arr.length > 0) {
         for (let i = 0; i < arr.length; i++) {
             const item = arr[i];
             if (item[idKey]?.toString() === id?.toString()) {
                 return item;
             } else if (Array.isArray(item[childrenKey]) && item[childrenKey].length > 0) {
-                const result = findTreeNodeByIdFn(id, item[childrenKey], idKey, childrenKey);
+                const result = findTreeNodeById(id, item[childrenKey], idKey, childrenKey);
                 if (result) {
                     return result;
                 }
             }
         }
     }
-};
+}
 
 /**
  * 在嵌套树中按 `id` 递归查找节点，并返回其指定属性值。

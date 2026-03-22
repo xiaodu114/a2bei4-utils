@@ -65,6 +65,32 @@ export function flatCompleteTree2NestedTree(nodes, parentId = 0, { idKey = "id",
 }
 
 /**
+ * 在嵌套树中按 `id` 递归查找节点
+ *
+ * @template T extends Record<PropertyKey, any>
+ * @param {string | number} id - 要查找的 id
+ * @param {T[]} arr - 嵌套树森林
+ * @param {string} [idKey='id'] - 主键字段
+ * @param {string} [childrenKey='children'] - 子节点字段
+ * @returns {any} 找到的节点；未找到返回 `undefined`
+ */
+export const findTreeNodeById = function findTreeNodeByIdFn(id, arr, idKey = "id", childrenKey = "children") {
+    if (Array.isArray(arr) && arr.length > 0) {
+        for (let i = 0; i < arr.length; i++) {
+            const item = arr[i];
+            if (item[idKey]?.toString() === id?.toString()) {
+                return item;
+            } else if (Array.isArray(item[childrenKey]) && item[childrenKey].length > 0) {
+                const result = findTreeNodeByIdFn(id, item[childrenKey], idKey, childrenKey);
+                if (result) {
+                    return result;
+                }
+            }
+        }
+    }
+};
+
+/**
  * 在嵌套树中按 `id` 递归查找节点，并返回其指定属性值。
  *
  * @template T extends Record<PropertyKey, any>
@@ -75,21 +101,9 @@ export function flatCompleteTree2NestedTree(nodes, parentId = 0, { idKey = "id",
  * @param {string} [childrenKey='children'] - 子节点字段
  * @returns {any} 找到的值；未找到返回 `undefined`
  */
-export const findObjAttrValueById = function findObjAttrValueByIdFn(id, arr, resultKey = "name", idKey = "id", childrenKey = "children") {
-    if (Array.isArray(arr) && arr.length > 0) {
-        for (let i = 0; i < arr.length; i++) {
-            const item = arr[i];
-            if (item[idKey]?.toString() === id?.toString()) {
-                return item[resultKey];
-            } else if (Array.isArray(item[childrenKey]) && item[childrenKey].length > 0) {
-                const result = findObjAttrValueByIdFn(id, item[childrenKey], resultKey, idKey, childrenKey);
-                if (result) {
-                    return result;
-                }
-            }
-        }
-    }
-};
+export function findObjAttrValueById(id, arr, resultKey = "name", idKey = "id", childrenKey = "children") {
+    return findTreeNodeById(id, arr, idKey, childrenKey)?.[resultKey];
+}
 
 /**
  * 从服务端返回的已选 id 数组里，提取出

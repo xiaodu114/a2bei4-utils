@@ -77,6 +77,9 @@ export async function fetchOrDownloadByUrl(url, fileName) {
             const urlPathname = new URL(url).pathname;
             // 获取路径的最后一部分作为文件名，并移除可能的查询参数
             fileName = urlPathname.substring(urlPathname.lastIndexOf("/") + 1).split("?")[0];
+            if (fileName) {
+                fileName = decodeURIComponent(fileName);
+            }
         } catch (e) {}
         // 如果提取后文件名为空（例如 URL 以 '/' 结尾），也使用时间戳
         if (!fileName) {

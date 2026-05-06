@@ -178,3 +178,61 @@ export function extractFullyCheckedKeys(treeData, selectedKeys, idKey = "id", ch
         halfChecked: [...halfChecked]
     };
 }
+
+/**
+ * 在树形结构中查找目标节点的完整路径（从根节点到目标节点，含目标节点自身）。
+ *
+ * @template T extends Record<PropertyKey, any>
+ * @param {T[]} nodes - 树形结构森林（支持多根）
+ * @param {any} targetValue - 目标节点的 key 值
+ * @param {string} [key='id'] - 节点唯一标识字段
+ * @param {string} [parentKey='pid'] - 父节点标识字段（指向父节点的 key 值）
+ * @param {string} [childrenKey='children'] - 子节点数组字段
+ * @returns {T[]} 从根到目标节点的路径数组；未找到返回空数组
+ *
+ * @example
+ * const tree = [
+ *   { id: 1, pid: null, children: [
+ *     { id: 2, pid: 1, children: [
+ *       { id: 3, pid: 2 }
+ *     ]}
+ *   ]}
+ * ];
+ * findTreeNodePath(tree, 3); // [{id:1, ...}, {id:2, ...}, {id:3, ...}]
+ */
+export function findTreeNodePath(nodes, targetValue, key = "id", parentKey = "pid", childrenKey = "children") {
+    if (!Array.isArray(nodes) || nodes.length === 0 || targetValue == null) {
+        return [];
+    }
+
+    // 1. 建立节点索引
+    const index = new Map();
+    const stack = [...nodes];
+
+    while (stack.length) {
+        const node = stack.pop();
+        if (!node || typeof node !== "object") continue;
+
+        index.set(node[key], node);
+
+        const children = node[childrenKey];
+        if (Array.isArray(children)) {
+            stack.push(...children);
+        }
+    }
+
+    // 2. 回溯路径（防循环引用）
+    const path = [];
+    const visited = new Set();
+    let cur = index.get(targetValue);
+
+    while (cur && !visited.has(cur[key])) {
+        visited.add(cur[key]);
+        path.push(cur);
+
+        const parentValue = cur[parentKey];
+        cur = parentValue != null ? index.get(parentValue) : undefined;
+    }
+
+    return path.reverse();
+}

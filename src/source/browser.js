@@ -51,3 +51,107 @@ export function getSearchParam(key) {
     const params = getAllSearchParams();
     return params[key];
 }
+
+/**
+ * 全屏操作辅助工具对象
+ * @namespace fullscreenHelper
+ */
+export const fullscreenHelper = {
+    /**
+     * 请求进入全屏模式
+     * @param {Element} element - 要全屏显示的元素
+     * @returns {Promise<void> | undefined} 全屏请求 Promise（如支持）
+     */
+    requestFullscreen: (element) => {
+        if (!element) {
+            console.warn("未提供有效的 DOM 元素");
+            return;
+        }
+        if (element.requestFullscreen) {
+            return element.requestFullscreen();
+        } else if (element.mozRequestFullScreen) {
+            return element.mozRequestFullScreen();
+        } else if (element.webkitRequestFullscreen) {
+            return element.webkitRequestFullscreen();
+        } else if (element.msRequestFullscreen) {
+            return element.msRequestFullscreen();
+        } else {
+            console.warn("当前浏览器不支持全屏 API");
+        }
+    },
+
+    /**
+     * 退出全屏模式
+     * @returns {Promise<void> | undefined} 退出全屏请求 Promise（如支持）
+     */
+    exitFullscreen: () => {
+        if (document.exitFullscreen) {
+            return document.exitFullscreen();
+        } else if (document.mozCancelFullScreen) {
+            return document.mozCancelFullScreen();
+        } else if (document.webkitExitFullscreen) {
+            return document.webkitExitFullscreen();
+        } else if (document.msExitFullscreen) {
+            return document.msExitFullscreen();
+        }
+    },
+
+    /**
+     * 获取当前全屏元素
+     * @returns {Element | null} 当前处于全屏模式的元素，无则返回 null
+     */
+    getFullscreenElement: () => {
+        return document.fullscreenElement || document.mozFullScreenElement || document.webkitFullscreenElement || document.msFullscreenElement || null;
+    },
+
+    /**
+     * 检测当前是否处于全屏模式
+     * @returns {boolean} 是否全屏中
+     */
+    isFullscreen: () => {
+        return !!(document.fullscreenElement || document.mozFullScreenElement || document.webkitFullscreenElement || document.msFullscreenElement);
+    },
+
+    /**
+     * 检测浏览器是否支持全屏 API
+     * @returns {boolean} 是否支持全屏
+     */
+    isFullscreenEnabled: () => {
+        return !!(document.fullscreenEnabled || document.mozFullScreenEnabled || document.webkitFullscreenEnabled || document.msFullscreenEnabled);
+    },
+
+    /**
+     * 切换指定元素的全屏状态
+     * @param {Element} element - 要切换全屏的元素
+     * @returns {Promise<void> | undefined} 全屏操作 Promise
+     */
+    toggleFullscreen: (element) => {
+        if (fullscreenHelper.isFullscreen()) {
+            return fullscreenHelper.exitFullscreen();
+        } else {
+            return fullscreenHelper.requestFullscreen(element);
+        }
+    },
+
+    /**
+     * 监听全屏变化事件
+     * @param {Function} callback - 全屏状态变化时的回调函数，参数为 isFullscreen: boolean
+     * @returns {Function} 取消监听的函数
+     */
+    onFullscreenChange: (callback) => {
+        const handler = () => {
+            callback(fullscreenHelper.isFullscreen());
+        };
+        document.addEventListener("fullscreenchange", handler);
+        document.addEventListener("webkitfullscreenchange", handler);
+        document.addEventListener("mozfullscreenchange", handler);
+        document.addEventListener("msfullscreenchange", handler);
+
+        return () => {
+            document.removeEventListener("fullscreenchange", handler);
+            document.removeEventListener("webkitfullscreenchange", handler);
+            document.removeEventListener("mozfullscreenchange", handler);
+            document.removeEventListener("msfullscreenchange", handler);
+        };
+    }
+};

@@ -155,3 +155,33 @@ export const fullscreenHelper = {
         };
     }
 };
+
+/**
+ * 复制文本到剪贴板
+ * @param {String} text
+ * @returns {Promise<void>}
+ */
+export async function copyTextToClipboard(text) {
+    if (window.navigator.clipboard) {
+        await window.navigator.clipboard.writeText(text);
+        return;
+    }
+
+    return new Promise((resolve, reject) => {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed"; // 防止滚动
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+
+        try {
+            document.execCommand("copy") ? resolve() : reject(new Error("execCommand failed"));
+        } catch (err) {
+            reject(err);
+        } finally {
+            document.body.removeChild(ta);
+        }
+    });
+}

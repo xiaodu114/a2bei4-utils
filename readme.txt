@@ -1,4 +1,5 @@
-！！！写在最前面： dist 、 types 、 /src/temp 、 /src/index.js 是构建过程中生成的，可以利用 clean-pack-generate.js 删除
+！！！写在最前面： dist 、 types 、 /src/temp 、 /src/index.js 是构建过程中生成的，可以利用 clean-pack-generate.js 删除，命令如下：
+pnpm run clean:pack
 
 -->  官方 npm 仓库地址： https://registry.npmjs.org/
 -->  阿里云 npm 仓库地址： https://registry.npmmirror.com/

@@ -17,6 +17,10 @@ export class IntervalTimer {
         this._fn = fn;
         this._ms = ms;
         this._timerId = null;
+        /**
+         * @type {symbol | null}
+         */
+        this._loopId = null;
     }
 
     /**
@@ -25,8 +29,17 @@ export class IntervalTimer {
      */
     start() {
         this.stop();
+
+        const curLoopId = Symbol();
+        this._loopId = curLoopId;
+
         const loop = () => {
+            if (this._loopId !== curLoopId) return;
+
             this._fn(); // 执行业务
+
+            if (this._loopId !== curLoopId) return;
+
             this._timerId = setTimeout(loop, this._ms);
         };
         loop(); // 立即执行第一次
@@ -36,6 +49,7 @@ export class IntervalTimer {
      * 停止定时器。
      */
     stop() {
+        this._loopId = null;
         if (this._timerId !== null) {
             clearTimeout(this._timerId);
             this._timerId = null;

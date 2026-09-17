@@ -236,3 +236,178 @@ export function findTreeNodePath(nodes, targetValue, key = "id", parentKey = "pi
 
     return path.reverse();
 }
+
+/**
+ * 处理函数的返回值类型，用于控制节点是否添加。
+ * @typedef {Object} TransformTreeDataWithExtra_HandlerResult
+ * @property {boolean} [isAdd] - 是否将该节点添加到树中。如果为 false，则过滤掉该节点。
+ */
+
+/**
+ * 最终输出的树形结构的字段配置。
+ * @typedef {Object} TransformTreeDataWithExtra_TreeDataOption
+ * @property {string} [idKey="key"] - 最终树节点的唯一标识字段名。
+ * @property {string} [titleKey="title"] - 最终树节点的标题显示字段名。
+ * @property {string} [childrenKey="children"] - 最终树节点的子节点列表字段名。
+ */
+
+/**
+ * 主数据（父节点）的相关配置选项。
+ * @typedef {Object} TransformTreeDataWithExtra_NodeOption
+ * @property {string} [idPrefix] - 节点 ID 的前缀。
+ * @property {string} [idKey="id"] - 原始数据中作为唯一标识的字段名。
+ * @property {string} [titleKey="name"] - 原始数据中作为标题的字段名。
+ * @property {string} [childrenKey="children"] - 原始数据中子节点列表的字段名。
+ * @property {Record<string, any>} [assignData] - 需要额外合并到每个树节点上的静态属性。
+ * @property {string} [rawDataKey] - 如果提供，会将原始节点数据对象挂载到树节点的此字段下。
+ * @property {Object<string, any>} [nodeDataId2Obj] - (副作用) 引用传递的对象，用于建立 id -> 原始数据的映射。
+ * @property {function(object, object): TransformTreeDataWithExtra_HandlerResult | void} [nodeDataHandler] - 对每个主节点进行处理的回调函数。
+ */
+
+/**
+ * 额外数据（子节点）的相关配置选项。
+ * @typedef {Object} TransformTreeDataWithExtra_ExtraOption
+ * @property {string} [idPrefix] - 额外节点 ID 的前缀。
+ * @property {string} [idKey="id"] - 额外数据中作为唯一标识的字段名。
+ * @property {string} [titleKey="name"] - 额外数据中作为标题的字段名。
+ * @property {string} [childrenKey="extraChildren"] - 在主节点上查找额外数据列表的字段名。
+ * @property {Record<string, any>} [assignData] - 需要额外合并到每个额外树节点上的静态属性。
+ * @property {string} [rawDataKey] - 如果提供，会将原始额外数据对象挂载到树节点的此字段下。
+ * @property {Object<string, any>} [extraDataId2Obj] - (副作用) 引用传递的对象，用于建立 id -> 额外数据的映射。
+ * @property {function(object, object, object): TransformTreeDataWithExtra_HandlerResult | void} [extraDataHandler] - 对每个额外节点进行处理的回调函数。
+ */
+
+/**
+ * 将平铺或嵌套的原始数据转换为标准树形结构。
+ * 支持将外部“额外数据”节点作为子节点插入到主节点层级中。
+ * 支持自定义字段映射、ID 前缀、数据挂载以及通过回调函数过滤节点。
+ *
+ * @template T
+ * @param {Array<T>} data - 原始数据数组。
+ * @param {TransformTreeDataWithExtra_ExtraOption} [extraOption] - 额外数据（子节点）的相关配置选项。
+ * @param {TransformTreeDataWithExtra_NodeOption} [nodeOption] - 主数据（父节点）的相关配置选项。
+ * @param {TransformTreeDataWithExtra_TreeDataOption} [treeDataOption] - 最终输出的树形结构的字段配置选项。
+ * @returns {Array<object>} 转换后的树形数据数组。
+ */
+export function transformTreeDataWithExtra(data, extraOption = {}, nodeOption = {}, treeDataOption = {}) {
+    const { idPrefix: nodeIdPrefix, idKey: nodeIdKey = "id", titleKey: nodeTitleKey = "name", childrenKey: nodeChildrenKey = "children", assignData: nodeAssignData = {}, rawDataKey: nodeRawDataKey, nodeDataId2Obj, nodeDataHandler } = nodeOption;
+    const { idPrefix: extraIdPrefix, idKey: extraIdKey = "id", titleKey: extraTitleKey = "name", childrenKey: extraChildrenKey = "extraChildren", assignData: extraAssignData = {}, rawDataKey: extraRawDataKey, extraDataId2Obj, extraDataHandler } = extraOption;
+
+    const { idKey: treeIdKey = "key", titleKey: treeTitleKey = "title", childrenKey: treeChildrenKey = "children" } = treeDataOption;
+
+    const transformNode = (node) => {
+        const treeNode = {
+            [treeIdKey]: isNonEmptyString(nodeIdPrefix) ? nodeIdPrefix + node[nodeIdKey] : node[nodeIdKey],
+            [treeTitleKey]: node[nodeTitleKey],
+            [treeChildrenKey]: [],
+            ...nodeAssignData
+        };
+        if (isNonEmptyString(nodeRawDataKey)) {
+            treeNode[nodeRawDataKey] = node;
+        }
+
+        if (Array.isArray(node[nodeChildrenKey]) && node[nodeChildrenKey].length > 0) {
+            treeNode[treeChildrenKey] = node[nodeChildrenKey].map((child) => transformNode(child)).filter((child) => child !== null);
+        }
+
+        if (Array.isArray(node[extraChildrenKey]) && node[extraChildrenKey].length > 0) {
+            const isValidExtraDataId2Obj = typeof extraDataId2Obj === "object" && extraDataId2Obj !== null;
+            const extraNodes = [];
+            for (const extraItem of node[extraChildrenKey]) {
+                if (isValidExtraDataId2Obj) {
+                    extraDataId2Obj[extraItem[extraIdKey]] = extraItem;
+                }
+                const extraNode = {
+                    [treeIdKey]: isNonEmptyString(extraIdPrefix) ? extraIdPrefix + extraItem[extraIdKey] : extraItem[extraIdKey],
+                    [treeTitleKey]: extraItem[extraTitleKey],
+                    [treeChildrenKey]: [],
+                    ...extraAssignData
+                };
+                if (isNonEmptyString(extraRawDataKey)) {
+                    extraNode[extraRawDataKey] = extraItem;
+                }
+                if (typeof extraDataHandler === "function") {
+                    const result = extraDataHandler(extraNode, extraItem, node);
+                    if (result?.isAdd === false) continue;
+                }
+                extraNodes.push(extraNode);
+            }
+            treeNode[treeChildrenKey] = [...treeNode[treeChildrenKey], ...extraNodes];
+        }
+
+        if (typeof nodeDataId2Obj === "object" && nodeDataId2Obj !== null) {
+            nodeDataId2Obj[node[nodeIdKey]] = node;
+        }
+
+        if (typeof nodeDataHandler === "function") {
+            const result = nodeDataHandler(treeNode, node);
+            if (result?.isAdd === false) {
+                return null;
+            }
+        }
+
+        return treeNode;
+    };
+
+    return data.map((item) => transformNode(item)).filter((item) => item !== null);
+}
+
+/**
+ * 自定义过滤函数的类型定义。
+ * @callback FilterTreeData_FilterFn
+ * @param {object} node - 当前遍历到的树节点对象。
+ * @param {string | number} filterValue - 当前用于过滤的值。
+ * @param {Array<object>} [children] - 当前节点的子节点数组（原始数据）。
+ * @returns {boolean} 返回 true 表示保留该节点，false 表示过滤掉。
+ */
+
+/**
+ * 递归过滤树形数据。
+ *
+ * 该函数会保留符合条件的节点。特别地，**即使当前节点本身不匹配条件，只要其子孙节点中有匹配项，该节点也会被保留**，
+ * 从而保证过滤后的树结构能展示出匹配节点的完整路径。
+ *
+ * @template T
+ * @param {Array<T>} treeData - 源树形数据数组。
+ * @param {string | number} filterValue - 用于过滤的关键字。
+ * @param {string} [filterKey="name"] - 节点对象中用于匹配的字段名。默认为 "name"。如果提供了 filterFn 则此项无效。
+ * @param {string} [childrenKey="children"] - 节点对象中存储子数组的字段名。默认为 "children"。
+ * @param {FilterTreeData_FilterFn} [filterFn] - 自定义过滤函数。如果提供，将忽略 filterKey，使用此函数的返回值判断是否匹配。
+ * @returns {Array<T>} 过滤后的新树形数据数组。注意：返回的是节点对象的浅拷贝。
+ */
+export function filterTreeData(treeData, filterValue, filterKey = "name", childrenKey = "children", filterFn) {
+    if (!Array.isArray(treeData) || treeData.length === 0) {
+        return [];
+    }
+
+    if (filterValue == null || filterValue === "") {
+        return treeData.map((node) => ({ ...node }));
+    }
+
+    const result = [];
+
+    for (const node of treeData) {
+        const newNode = { ...node };
+        const children = node[childrenKey];
+
+        //  后代节点
+        let isDescendantMatch = false;
+        if (Array.isArray(children)) {
+            const newChildren = filterTreeData(children, filterValue, filterKey, childrenKey, filterFn);
+            newNode[childrenKey] = newChildren;
+            isDescendantMatch = newChildren.length > 0;
+        }
+
+        if (isDescendantMatch) {
+            result.push(newNode);
+        } else {
+            // 当前节点
+            const isMatch = typeof filterFn === "function" ? filterFn(node, filterValue, children) : node[filterKey]?.toString().includes(filterValue);
+
+            if (isMatch) {
+                result.push(newNode);
+            }
+        }
+    }
+    return result;
+}

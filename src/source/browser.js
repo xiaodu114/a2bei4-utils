@@ -185,3 +185,85 @@ export async function copyTextToClipboard(text) {
         }
     });
 }
+
+/**
+ * 通过动态创建 <script> 标签加载一个 JS 文件
+ *
+ * - 每次调用都会创建一个新的 <script> 标签并插入 document.head
+ * - 是否需要去重/防重复加载由调用方自行处理
+ * - 默认设置 script.async = true、script.crossOrigin = "anonymous"，
+ *   如需修改请使用 handleScriptEle
+ *
+ * @param {string} src - JS 文件的 URL
+ * @param {object} [options] - 可选配置
+ * @param {number} [options.timeout=15000] - 加载超时时间（毫秒），超时后 reject；传 0 或负数表示不超时
+ * @param {(script: HTMLScriptElement) => void} [options.handleScriptEle] -
+ *        自定义处理 script 元素的回调，在 append 到文档前调用，
+ *        可用于覆盖 crossOrigin、设置 integrity、dataset 等属性；
+ *        回调抛出异常时本次加载直接 reject
+ * @returns {Promise<void>} 加载成功时 resolve；超时或加载失败时 reject（Error.message 包含原因和 src）
+ *
+ * @example
+ * loadJSByScript('https://cdn.example.com/lib.js')
+ *   .then(() => console.log('加载成功'))
+ *   .catch(err => console.error(err.message));
+ *
+ * @example
+ * // 自定义 script 属性
+ * loadJSByScript('https://cdn.example.com/lib.js', {
+ *   timeout: 5000,
+ *   handleScriptEle: (script) => {
+ *     script.crossOrigin = 'use-credentials';
+ *     script.dataset.track = 'lib';
+ *   }
+ * });
+ */
+export function loadJSByScript(src, { timeout = 15000, handleScriptEle } = {}) {
+    return new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = src;
+        script.async = true;
+        script.crossOrigin = "anonymous";
+
+        if (typeof handleScriptEle === "function") {
+            try {
+                handleScriptEle(script);
+            } catch (err) {
+                reject(new Error(`[loadJSByScript] handleScriptEle 执行出错: ${err.message}`));
+                return;
+            }
+        }
+
+        let timer = null;
+
+        function finish(success, error) {
+            if (timer) clearTimeout(timer);
+            script.removeEventListener("load", onLoad);
+            script.removeEventListener("error", onError);
+            if (success) {
+                resolve();
+            } else {
+                script.remove();
+                reject(error);
+            }
+        }
+
+        function onLoad() {
+            finish(true);
+        }
+
+        function onError() {
+            finish(false, new Error(`[loadJSByScript] 脚本加载失败: ${src}`));
+        }
+
+        if (timeout > 0) {
+            timer = setTimeout(() => {
+                finish(false, new Error(`[loadJSByScript] 加载超时（${timeout}ms）: ${src}`));
+            }, timeout);
+        }
+
+        script.addEventListener("load", onLoad);
+        script.addEventListener("error", onError);
+        document.head.appendChild(script);
+    });
+}

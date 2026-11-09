@@ -2,7 +2,7 @@
 
 /**
  * 返回任意值的运行时类型字符串（小写形式）。
- * 
+ *
  * @param {*} obj 待检测的值
  * @returns {keyof globalThis|"blob"|"file"|"formdata"|string} 小写类型名
  */
@@ -15,7 +15,7 @@ export function getDataType(obj) {
 
 /**
  * 判断值是否为原生 Blob（含 File）。
- * 
+ *
  * @param {*} obj - 待检测的值
  * @returns {obj is Blob}
  */
@@ -25,7 +25,7 @@ export function isBlob(obj) {
 
 /**
  * 判断值是否为**纯粹**的 Object（即 `{}` 或 `new Object()`，不含数组、null、自定义类等）。
- * 
+ *
  * @param {*} obj - 待检测的值
  * @returns {obj is Record<PropertyKey, any>}
  */
@@ -35,7 +35,7 @@ export function isPlainObject(obj) {
 
 /**
  * 判断值是否为 Promise（含 Promise 子类）。
- * 
+ *
  * @param {*} obj - 待检测的值
  * @returns {obj is Promise<any>}
  */
@@ -55,7 +55,7 @@ export function isDate(t) {
 
 /**
  * 判断值是否为函数（含异步函数、生成器函数、类）。
- * 
+ *
  * @param {*} obj - 待检测的值
  * @returns {obj is Function}
  */
@@ -65,7 +65,7 @@ export function isFunction(obj) {
 
 /**
  * 判断值是否为**非空**字符串。
- * 
+ *
  * @param {*} obj - 待检测的值
  * @returns {obj is string}
  */
@@ -170,6 +170,21 @@ export function randomHanOrEn(len, zhProb = 0.5) {
         buf.push(Math.random() < zhProb ? randomHan() : randomEnLetter());
     }
     return buf.join("");
+}
+
+/**
+ * 生成一个随机颜色值（十六进制格式）。
+ *
+ * @returns {string} 形如 "#ffffff" 的 6 位十六进制颜色字符串
+ */
+export function randomHexColor() {
+    // R、G、B 三个通道各抽一个 0~255 的整数
+    const r = randomIntInRange(0, 255);
+    const g = randomIntInRange(0, 255);
+    const b = randomIntInRange(0, 255);
+
+    // toString(16) 转十六进制；padStart 保证不足两位时补 0（如 0x0a -> "0a"）
+    return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
 }
 
 //#endregion
